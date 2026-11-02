@@ -6,14 +6,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-name: Build RiderX APK
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Code
@@ -30,12 +22,10 @@ jobs:
       with:
         gradle-version: '8.4'
 
-    - name: Create 100% Complete RiderX App Files
+    - name: Create App Files
       run: |
-        # 1. Setup SDK Path
         echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
 
-        # 2. Settings file
         cat << 'EOF' > settings.gradle.kts
         pluginManagement {
             repositories {
@@ -55,7 +45,6 @@ jobs:
         include(":app")
         EOF
 
-        # 3. Root build.gradle.kts
         cat << 'EOF' > build.gradle.kts
         plugins {
             id("com.android.application") version "8.2.2" apply false
@@ -63,7 +52,6 @@ jobs:
         }
         EOF
 
-        # 4. App build.gradle.kts
         mkdir -p app/src/main/java/com/riderx/app
         cat << 'EOF' > app/build.gradle.kts
         plugins {
@@ -115,7 +103,6 @@ jobs:
         }
         EOF
 
-        # 5. Manifest
         cat << 'EOF' > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -140,7 +127,6 @@ jobs:
         </manifest>
         EOF
 
-        # 6. MainActivity.kt (Full RiderX Dark UI & Mode Toggle)
         cat << 'EOF' > app/src/main/java/com/riderx/app/MainActivity.kt
         package com.riderx.app
 
@@ -208,40 +194,123 @@ jobs:
                         )
                         Spacer(modifier = Modifier.height(20.dp))
                     }
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(DarkSurface, RoundedCornerShape(12.dp))
+                                .padding(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(
+                                        if (isCycleMode) NeonGreen else Color.Transparent,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable { isCycleMode = true }
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "🚲 Cycle Mode",
+                                    color = if (isCycleMode) DeepBlack else TextGray,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
 
-    - name: Auto Setup and Fix Resources
-      run: |
-        echo "Moving files to root directory..."
-        cp -r .github/workflows/app ./ 2>/dev/null || true
-        cp .github/workflows/build.gradle.kts ./ 2>/dev/null || true
-        cp .github/workflows/settings.gradle.kts ./ 2>/dev/null || true
-        echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(
+                                        if (!isCycleMode) NeonGreen else Color.Transparent,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable { isCycleMode = false }
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "🏍️ Bike Mode",
+                                    color = if (!isCycleMode) DeepBlack else TextGray,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
 
-        # Fix invalid AndroidManifest icon reference
-        if [ -f app/src/main/AndroidManifest.xml ]; then
-          sed -i 's/android:icon="@android:drawable\/sym_def_app_icon"//g' app/src/main/AndroidManifest.xml
-          sed -i 's/android:roundIcon="@android:drawable\/sym_def_app_icon"//g' app/src/main/AndroidManifest.xml
-        fi
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text("Total Distance", color = TextGray, fontSize = 12.sp)
+                                    Text("1,248 KM", color = TextWhite, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Column {
+                                    Text("Completed", color = TextGray, fontSize = 12.sp)
+                                    Text("28 Rides", color = NeonGreen, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.4'
+                    item {
+                        Text(
+                            text = if (isCycleMode) "Nearby Cycling Trails" else "Upcoming Motorcycle Rides",
+                            color = TextWhite,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    items(4) { index ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 10.dp)
+                                .clickable {
+                                    Toast.makeText(context, "Opening Route Details...", Toast.LENGTH_SHORT).show()
+                                }
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = if (isCycleMode) "Morning Trail #$index" else "Highway Cruiser #$index",
+                                    color = NeonGreen,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Destination: Viewpoint Ridge", color = TextWhite, fontSize = 13.sp)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("${25 + index * 10} KM", color = TextGray, fontSize = 12.sp)
+                                    Text("06:30 AM", color = TextGray, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        EOF
 
     - name: Build Debug APK
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
-        JAVA_TOOL_OPTIONS: "-Xmx3072m"
-      run: gradle assembleDebug --no-daemon --stacktrace
+      run: gradle assembleDebug --no-daemon
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
