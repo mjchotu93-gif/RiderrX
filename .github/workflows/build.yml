@@ -17,14 +17,19 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Auto Fix File Locations
+    - name: Auto Setup and Fix Resources
       run: |
         echo "Moving files to root directory..."
         cp -r .github/workflows/app ./ 2>/dev/null || true
         cp .github/workflows/build.gradle.kts ./ 2>/dev/null || true
         cp .github/workflows/settings.gradle.kts ./ 2>/dev/null || true
         echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
-        ls -la
+
+        # Fix invalid AndroidManifest icon reference
+        if [ -f app/src/main/AndroidManifest.xml ]; then
+          sed -i 's/android:icon="@android:drawable\/sym_def_app_icon"//g' app/src/main/AndroidManifest.xml
+          sed -i 's/android:roundIcon="@android:drawable\/sym_def_app_icon"//g' app/src/main/AndroidManifest.xml
+        fi
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
@@ -34,6 +39,7 @@ jobs:
     - name: Build Debug APK
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
+        JAVA_TOOL_OPTIONS: "-Xmx3072m"
       run: gradle assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
